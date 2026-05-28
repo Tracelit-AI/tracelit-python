@@ -7,3 +7,4 @@
 - Non-blocking error span processor.
 - Auto-instrumentation activation using OpenTelemetry bootstrap registry.
 - WSGI and ASGI middleware integrations.
+- finish
