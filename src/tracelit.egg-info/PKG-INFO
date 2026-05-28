@@ -1,0 +1,131 @@
+Metadata-Version: 2.4
+Name: tracelit
+Version: 0.1.0
+Summary: Official Python SDK for Tracelit with OpenTelemetry.
+Author: Tracelit
+License: MIT
+Project-URL: Homepage, https://tracelit.io
+Project-URL: Repository, https://github.com/Tracelit-AI/tracelit-python
+Keywords: tracelit,opentelemetry,tracing,metrics,logs,apm
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: opentelemetry-api>=1.27.0
+Requires-Dist: opentelemetry-sdk>=1.27.0
+Requires-Dist: opentelemetry-exporter-otlp-proto-http>=1.27.0
+Requires-Dist: opentelemetry-semantic-conventions>=0.48b0
+Requires-Dist: opentelemetry-instrumentation>=0.48b0
+Provides-Extra: web
+Requires-Dist: opentelemetry-instrumentation-asgi>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-wsgi>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-django>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-flask>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-fastapi>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-starlette>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-tornado>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-aiohttp-server>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-pyramid>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-falcon>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-bottle>=0.48b0; extra == "web"
+Requires-Dist: opentelemetry-instrumentation-cherrypy>=0.48b0; extra == "web"
+Provides-Extra: db
+Requires-Dist: opentelemetry-instrumentation-sqlalchemy>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-psycopg2>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-psycopg>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-asyncpg>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-aiopg>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-pymysql>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-mysql>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-pymssql>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-pymongo>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-redis>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-sqlite3>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-elasticsearch>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-cassandra>=0.48b0; extra == "db"
+Requires-Dist: opentelemetry-instrumentation-tortoiseorm>=0.48b0; extra == "db"
+Provides-Extra: workers
+Requires-Dist: opentelemetry-instrumentation-celery>=0.48b0; extra == "workers"
+Requires-Dist: opentelemetry-instrumentation-remoulade>=0.48b0; extra == "workers"
+Provides-Extra: http
+Requires-Dist: opentelemetry-instrumentation-requests>=0.48b0; extra == "http"
+Requires-Dist: opentelemetry-instrumentation-urllib3>=0.48b0; extra == "http"
+Requires-Dist: opentelemetry-instrumentation-httpx>=0.48b0; extra == "http"
+Requires-Dist: opentelemetry-instrumentation-aiohttp-client>=0.48b0; extra == "http"
+Requires-Dist: opentelemetry-instrumentation-urllib>=0.48b0; extra == "http"
+Provides-Extra: messaging
+Requires-Dist: opentelemetry-instrumentation-kafka-python>=0.48b0; extra == "messaging"
+Requires-Dist: opentelemetry-instrumentation-confluent-kafka>=0.48b0; extra == "messaging"
+Requires-Dist: opentelemetry-instrumentation-aiokafka>=0.48b0; extra == "messaging"
+Requires-Dist: opentelemetry-instrumentation-pika>=0.48b0; extra == "messaging"
+Requires-Dist: opentelemetry-instrumentation-aio-pika>=0.48b0; extra == "messaging"
+Provides-Extra: cloud
+Requires-Dist: opentelemetry-instrumentation-botocore>=0.48b0; extra == "cloud"
+Requires-Dist: opentelemetry-instrumentation-boto3sqs>=0.48b0; extra == "cloud"
+Requires-Dist: opentelemetry-instrumentation-google-genai>=0.48b0; extra == "cloud"
+Provides-Extra: grpc
+Requires-Dist: opentelemetry-instrumentation-grpc>=0.48b0; extra == "grpc"
+Provides-Extra: graphql
+Requires-Dist: opentelemetry-instrumentation-graphql>=0.48b0; extra == "graphql"
+Provides-Extra: all
+Requires-Dist: opentelemetry-contrib-instrumentations>=0.48b0; extra == "all"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
+Requires-Dist: respx>=0.21.0; extra == "dev"
+Requires-Dist: httpx>=0.27.0; extra == "dev"
+Dynamic: license-file
+
+# Tracelit Python SDK
+
+Drop-in OpenTelemetry SDK for Python that exports traces, metrics, and logs to Tracelit via OTLP/HTTP.
+
+## Install
+
+```bash
+pip install tracelit
+```
+
+Optional extras:
+
+```bash
+pip install "tracelit[web]"
+pip install "tracelit[db]"
+pip install "tracelit[all]"
+```
+
+## Quick start
+
+```python
+import tracelit
+
+tracelit.auto_start(
+    api_key="YOUR_KEY",
+    service_name="payments-api",
+    environment="production",
+)
+```
+
+## Frameworks
+
+- Django: add `tracelit.integrations.django` to `INSTALLED_APPS`
+- FastAPI/Starlette/Sanic/Quart: wrap app with `TracelitASGIMiddleware`
+- Flask/Pyramid/Bottle/CherryPy: wrap app with `TracelitWSGIMiddleware`
+- Celery: call `install_celery_hook()` from `tracelit.integrations.celery`
+
+## Behavior guarantees
+
+- Non-blocking span export with async error-span queue
+- Never raises setup or exporter failures into customer code
+- Graceful shutdown flush at process exit
+- `TRACELIT_ENABLED=false` disables telemetry
+
+## Configuration
+
+| Option | Env var | Default |
+|---|---|---|
+| api_key | TRACELIT_API_KEY | required |
+| service_name | TRACELIT_SERVICE_NAME | unknown-service |
+| environment | TRACELIT_ENVIRONMENT | production |
+| endpoint | TRACELIT_ENDPOINT | https://ingest.tracelit.app |
+| sample_rate | TRACELIT_SAMPLE_RATE | 1.0 |
+| enabled | TRACELIT_ENABLED | true |
