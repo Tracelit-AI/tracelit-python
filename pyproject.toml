@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel", "packaging>=24.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tracelit"
+name = "tracelit-python"
 version = "0.1.0"
 description = "Official Python SDK for Tracelit with OpenTelemetry."
 readme = "README.md"
