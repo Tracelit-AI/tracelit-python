@@ -2,13 +2,16 @@
 
 ## Unreleased
 
+### Fixes
+
+- Auto-instrumentation no longer logs warnings for missing `opentelemetry-instrumentation-*` packages.
+- Skip Django instrumentation when `DJANGO_SETTINGS_MODULE` is not set (e.g. Flask-only processes).
+
 ### Documentation
 
-- Correct Django setup: use `tracelit.integrations.django.TracelitConfig` in `INSTALLED_APPS` (not `tracelit.integrations.django` alone).
-- Clarify there is no `tracelit.init()` API — use `tracelit.auto_start()`.
-- Document that OpenTelemetry instrumentation packages must be installed separately.
-- Add framework guides for Django, Flask, FastAPI, Celery, and python-decouple env bridging.
-- Add Mintlify docs page at `/sdk/python`.
+- Explicit per-framework setup guides (Django, Flask, FastAPI, Celery, scripts).
+- Clarify `auto_start()` is for Flask/FastAPI/scripts — Django uses `TracelitConfig` only.
+- Remove misleading one-line framework bullets; add complete working examples.
 
 ## 0.1.0
 

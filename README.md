@@ -8,58 +8,44 @@ Drop-in OpenTelemetry SDK for Python that exports traces, metrics, and logs to T
 pip install tracelit
 ```
 
-The base package includes the Tracelit exporter and auto-instrumentation bootstrap. **Install OpenTelemetry instrumentation packages for the libraries you use** (Django, Flask, Redis, Celery, etc.) — see [Instrumentation packages](#instrumentation-packages) below.
-
-Optional extras (install only what you need):
+Install OpenTelemetry instrumentation packages for **your** stack (see each framework section below). Tracelit only instruments libraries whose instrumentation package is installed — missing packages are skipped silently.
 
 ```bash
-pip install "tracelit[web]"      # Django, Flask, FastAPI, ASGI/WSGI
-pip install "tracelit[db]"       # SQLAlchemy, psycopg2, pymysql, redis, ...
-pip install "tracelit[workers]"  # Celery
-pip install "tracelit[http]"     # requests, httpx, urllib3
+pip install opentelemetry-instrumentation-flask      # Flask apps
+pip install opentelemetry-instrumentation-django     # Django apps
+pip install opentelemetry-instrumentation-fastapi    # FastAPI apps
+pip install opentelemetry-instrumentation-celery     # Celery workers
+pip install opentelemetry-instrumentation-redis        # Redis
+pip install opentelemetry-instrumentation-requests   # requests HTTP client
 ```
 
-If an extra fails to resolve (some contrib packages are not published for every Python version), install the individual `opentelemetry-instrumentation-*` packages you need instead.
+## Which setup do I use?
 
-## Quick start (scripts / generic apps)
+| App type | How to initialize Tracelit |
+|---|---|
+| **Django** | Add `tracelit.integrations.django.TracelitConfig` to `INSTALLED_APPS`. Do **not** call `auto_start()` in `settings.py`. |
+| **Flask** | Call `tracelit.auto_start()` in `app.py` before routes run. Expose a module-level `app` object. |
+| **FastAPI** | Call `tracelit.auto_start()` in `main.py` before the app serves traffic. |
+| **Celery worker** | Call `install_celery_hook()` in `celery.py`. |
+| **Script / CLI / batch job** | Call `tracelit.auto_start()` at process startup. |
 
-```python
-import os
-import tracelit
+> There is **no** `tracelit.init()` API.
 
-tracelit.auto_start(
-    api_key=os.environ["TRACELIT_API_KEY"],
-    service_name="payments-api",
-    environment=os.getenv("ENV", "production"),
-)
-```
+---
 
-Or rely entirely on environment variables and call:
+## Django
 
-```python
-import tracelit
-
-tracelit.auto_start()
-```
-
-## Framework integration
-
-> **There is no `tracelit.init()` API.** Use `tracelit.auto_start()` or the framework hooks below.
-
-### Django
-
-Add the app config to `INSTALLED_APPS` (ideally first). Tracelit starts automatically in `AppConfig.ready()` **after** Django is configured.
+**1. Add to `settings.py`:**
 
 ```python
-# settings.py
 INSTALLED_APPS = [
-    "tracelit.integrations.django.TracelitConfig",  # not "tracelit.integrations.django"
+    "tracelit.integrations.django.TracelitConfig",  # full path required
     "django.contrib.admin",
     # ...
 ]
 ```
 
-Set environment variables (`.env`, deployment config, etc.):
+**2. Set environment variables** (`.env`, deployment config, etc.):
 
 ```bash
 TRACELIT_API_KEY=your-api-key
@@ -68,9 +54,19 @@ TRACELIT_ENVIRONMENT=production
 TRACELIT_ENDPOINT=https://ingest.tracelit.app
 ```
 
-> **Do not** call `tracelit.auto_start()` at the top of `settings.py`. Settings load before Django is fully initialized and framework instrumentation will fail or silently no-op.
+**3. Install Django instrumentation:**
 
-If you load secrets with `python-decouple` or `django-environ`, bridge them into `os.environ` **before** `INSTALLED_APPS`:
+```bash
+pip install opentelemetry-instrumentation-django
+```
+
+**4. Restart Django** (`runserver`, gunicorn, uvicorn, etc.).
+
+Tracelit starts automatically in `AppConfig.ready()` after Django is configured.
+
+### python-decouple / django-environ
+
+Bridge secrets into `os.environ` **before** `INSTALLED_APPS`:
 
 ```python
 import os
@@ -81,61 +77,11 @@ os.environ.setdefault("TRACELIT_SERVICE_NAME", config("TRACELIT_SERVICE_NAME", d
 os.environ.setdefault("TRACELIT_ENVIRONMENT", config("TRACELIT_ENVIRONMENT", default="production"))
 ```
 
-Install Django instrumentation:
+> **Do not** call `tracelit.auto_start()` at the top of `settings.py`.
 
-```bash
-pip install opentelemetry-instrumentation-django
-```
+### Celery (Django projects with background workers)
 
-### Flask / WSGI apps
-
-Call `auto_start()` before handling requests, then optionally wrap the WSGI app for HTTP metrics:
-
-```python
-import os
-import tracelit
-
-tracelit.auto_start(
-    api_key=os.environ["TRACELIT_API_KEY"],
-    service_name="my-flask-app",
-)
-
-from flask import Flask
-from tracelit.integrations.wsgi import TracelitWSGIMiddleware
-
-app = Flask(__name__)
-app.wsgi_app = TracelitWSGIMiddleware(app.wsgi_app)
-```
-
-```bash
-pip install opentelemetry-instrumentation-flask opentelemetry-instrumentation-wsgi
-```
-
-### FastAPI / Starlette / ASGI apps
-
-```python
-import os
-import tracelit
-
-tracelit.auto_start(
-    api_key=os.environ["TRACELIT_API_KEY"],
-    service_name="my-api",
-)
-
-from fastapi import FastAPI
-from tracelit.integrations.asgi import TracelitASGIMiddleware
-
-app = FastAPI()
-app = TracelitASGIMiddleware(app)
-```
-
-```bash
-pip install opentelemetry-instrumentation-fastapi opentelemetry-instrumentation-asgi
-```
-
-### Celery workers
-
-Web process instrumentation does **not** cover Celery workers. Add this to your `celery.py`:
+In `celery.py`:
 
 ```python
 from tracelit.integrations.celery import install_celery_hook
@@ -147,34 +93,124 @@ install_celery_hook()
 pip install opentelemetry-instrumentation-celery
 ```
 
-Restart workers after installing instrumentation packages.
+---
 
-## Instrumentation packages
+## Flask
 
-On startup, Tracelit attempts to instrument installed libraries. If a package is missing, you will see warnings like:
+**1. `app.py` — complete working example:**
 
+```python
+import os
+
+import tracelit
+
+tracelit.auto_start(
+    api_key=os.environ["TRACELIT_API_KEY"],
+    service_name="my-flask-app",
+    environment=os.getenv("FLASK_ENV", "production"),
+)
+
+from flask import Flask
+from tracelit.integrations.wsgi import TracelitWSGIMiddleware
+
+app = Flask(__name__)
+app.wsgi_app = TracelitWSGIMiddleware(app.wsgi_app)
+
+
+@app.get("/")
+def home():
+    return "ok"
 ```
-[Tracelit] failed to instrument opentelemetry-instrumentation-django: No module named 'opentelemetry.instrumentation.django'
-```
 
-These are **warnings, not crashes** — but without the matching instrumentation package you will not get traces for that library.
-
-| Your stack | Install |
-|---|---|
-| Django | `opentelemetry-instrumentation-django` |
-| Flask | `opentelemetry-instrumentation-flask` |
-| FastAPI | `opentelemetry-instrumentation-fastapi` |
-| PostgreSQL (psycopg2) | `opentelemetry-instrumentation-psycopg2` |
-| MySQL | `opentelemetry-instrumentation-pymysql` or `opentelemetry-instrumentation-mysqlclient` |
-| Redis | `opentelemetry-instrumentation-redis` |
-| Celery | `opentelemetry-instrumentation-celery` |
-| HTTP clients | `opentelemetry-instrumentation-requests`, `opentelemetry-instrumentation-httpx` |
-
-Disable specific instrumentations:
+**2. Install Flask instrumentation:**
 
 ```bash
-OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=sqlite3,asyncio
+pip install opentelemetry-instrumentation-flask opentelemetry-instrumentation-wsgi
 ```
+
+**3. Run:**
+
+```bash
+export TRACELIT_API_KEY=your-api-key
+FLASK_APP=app.py flask run
+```
+
+`FLASK_APP=app.py` requires a module-level variable named `app`. If your factory is named differently, use `FLASK_APP=app:create_app` instead.
+
+`TracelitWSGIMiddleware` adds HTTP request metrics. Flask route tracing comes from `opentelemetry-instrumentation-flask`.
+
+---
+
+## FastAPI
+
+**1. `main.py` — complete working example:**
+
+```python
+import os
+
+import tracelit
+
+tracelit.auto_start(
+    api_key=os.environ["TRACELIT_API_KEY"],
+    service_name="my-api",
+    environment=os.getenv("ENV", "production"),
+)
+
+from fastapi import FastAPI
+from tracelit.integrations.asgi import TracelitASGIMiddleware
+
+app = FastAPI()
+app = TracelitASGIMiddleware(app)
+
+
+@app.get("/")
+def home():
+    return {"ok": True}
+```
+
+**2. Install FastAPI instrumentation:**
+
+```bash
+pip install opentelemetry-instrumentation-fastapi opentelemetry-instrumentation-asgi
+```
+
+**3. Run with uvicorn:**
+
+```bash
+export TRACELIT_API_KEY=your-api-key
+uvicorn main:app
+```
+
+---
+
+## Scripts and batch jobs (no web framework)
+
+Use `tracelit.auto_start()` at the top of your entry point. This is for CLIs, cron jobs, and one-off scripts — **not** for Django (use `TracelitConfig` instead).
+
+```python
+import os
+import tracelit
+
+tracelit.auto_start(
+    api_key=os.environ["TRACELIT_API_KEY"],
+    service_name="nightly-report",
+    environment=os.getenv("ENV", "production"),
+)
+
+with tracelit.tracer().start_as_current_span("generate-report"):
+    # your logic here
+    pass
+```
+
+Or rely entirely on environment variables:
+
+```python
+import tracelit
+
+tracelit.auto_start()
+```
+
+---
 
 ## Manual spans and metrics
 
@@ -185,13 +221,7 @@ with tracelit.tracer().start_as_current_span("process-order"):
     tracelit.metrics.counter("orders.processed").add(1)
 ```
 
-## Behavior guarantees
-
-- Non-blocking span export with async error-span queue
-- Never raises setup or exporter failures into customer code
-- Graceful shutdown flush at process exit
-- `TRACELIT_ENABLED=false` disables telemetry
-- Error spans are always exported, even when sampling is below `1.0`
+---
 
 ## Configuration
 
@@ -203,3 +233,13 @@ with tracelit.tracer().start_as_current_span("process-order"):
 | endpoint | `TRACELIT_ENDPOINT` | `https://ingest.tracelit.app` |
 | sample_rate | `TRACELIT_SAMPLE_RATE` | `1.0` |
 | enabled | `TRACELIT_ENABLED` | `true` |
+
+Set `TRACELIT_ENABLED=false` in tests to disable telemetry with no code changes.
+
+## Behavior guarantees
+
+- Non-blocking span export with async error-span queue
+- Never raises setup or exporter failures into customer code
+- Graceful shutdown flush at process exit
+- Error spans are always exported, even when sampling is below `1.0`
+- Missing instrumentation packages are skipped silently (no startup warning spam)

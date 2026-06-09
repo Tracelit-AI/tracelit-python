@@ -1,45 +1,37 @@
 You are integrating the Tracelit Python SDK.
 
-1. Install:
-   pip install tracelit
+There is NO tracelit.init() API.
 
-2. Install OpenTelemetry instrumentation packages for libraries in use
-   (django, flask, fastapi, redis, celery, psycopg2, pymysql, requests, etc.).
-   Example:
-   pip install opentelemetry-instrumentation-django opentelemetry-instrumentation-redis
+Choose the correct setup by app type:
 
-3. There is NO tracelit.init() API. Use tracelit.auto_start().
+DJANGO (do NOT call auto_start in settings.py):
+  INSTALLED_APPS = ["tracelit.integrations.django.TracelitConfig", ...]
+  Set TRACELIT_* environment variables (bridge decouple into os.environ if needed).
+  pip install opentelemetry-instrumentation-django
+  Celery workers: install_celery_hook() in celery.py
 
-4. Django (recommended):
-   - Add to INSTALLED_APPS (first):
-     "tracelit.integrations.django.TracelitConfig"
-   - Do NOT call tracelit.auto_start() at the top of settings.py.
-   - Set TRACELIT_* environment variables (or bridge decouple/django-environ into os.environ).
-   - Celery workers: install_celery_hook() in celery.py.
+FLASK:
+  In app.py, call tracelit.auto_start(...) BEFORE routes handle traffic.
+  Expose module-level `app = Flask(__name__)`.
+  app.wsgi_app = TracelitWSGIMiddleware(app.wsgi_app)
+  pip install opentelemetry-instrumentation-flask opentelemetry-instrumentation-wsgi
+  FLASK_APP=app.py flask run
 
-5. Flask / WSGI:
-   - tracelit.auto_start(...) before app handles requests
-   - optional: app.wsgi_app = TracelitWSGIMiddleware(app.wsgi_app)
-   - pip install opentelemetry-instrumentation-flask
+FASTAPI:
+  In main.py, call tracelit.auto_start(...) before serving.
+  app = TracelitASGIMiddleware(FastAPI())
+  pip install opentelemetry-instrumentation-fastapi opentelemetry-instrumentation-asgi
+  uvicorn main:app
 
-6. FastAPI / ASGI:
-   - tracelit.auto_start(...) before app handles requests
-   - optional: app = TracelitASGIMiddleware(app)
-   - pip install opentelemetry-instrumentation-fastapi
+SCRIPTS / CLI / BATCH (no web framework):
+  tracelit.auto_start(api_key=..., service_name=..., environment=...)
+  or tracelit.auto_start() with TRACELIT_* env vars
 
-7. Generic scripts:
-   import tracelit
-   tracelit.auto_start(api_key=..., service_name=..., environment=...)
+Install opentelemetry-instrumentation-* packages for libraries in use.
+Missing instrumentation packages are skipped silently.
 
-8. Disable in tests:
-   TRACELIT_ENABLED=false
+Disable in tests: TRACELIT_ENABLED=false
 
-9. Manual spans and metrics:
-   with tracelit.tracer().start_as_current_span("op"):
-       pass
-   tracelit.metrics.counter("my.events").add(1)
-
-What you get automatically (when instrumentation packages are installed):
-- Traces for supported frameworks and libraries.
-- Logs bridged into OpenTelemetry log pipeline.
-- Runtime/process metrics with periodic export.
+Manual spans:
+  with tracelit.tracer().start_as_current_span("op"):
+      pass
